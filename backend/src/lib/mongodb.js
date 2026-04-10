@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const MONGODB_URI = "mongodb+srv://**********:************@cluster0.dnuzjfz.mongodb.net/eventra";
+const MONGODB_URI = "mongodb+srv://balrajukonne_db_user:eventra%402026@cluster0.dnuzjfz.mongodb.net/eventra";
 
 let cached = global.mongoose;
 
