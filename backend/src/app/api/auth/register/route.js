@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
+import { preflightResponse, withCors } from '@/lib/cors';
+
+export async function OPTIONS() {
+  return preflightResponse();
+}
 
 export async function POST(req) {
   try {
@@ -10,7 +15,7 @@ export async function POST(req) {
 
     // Validate incoming data
     if (!name || !email || !password) {
-      return NextResponse.json({ error: 'Name, email, and password are required' }, { status: 400 });
+      return withCors(NextResponse.json({ error: 'Name, email, and password are required' }, { status: 400 }));
     }
 
     await dbConnect();
@@ -18,7 +23,7 @@ export async function POST(req) {
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return NextResponse.json({ error: 'User with this email already exists' }, { status: 409 });
+      return withCors(NextResponse.json({ error: 'User with this email already exists' }, { status: 409 }));
     }
 
     // Hash the password securely
@@ -34,7 +39,7 @@ export async function POST(req) {
     });
 
     // Don't send password back in response
-    return NextResponse.json({
+    return withCors(NextResponse.json({
       message: 'User registered successfully',
       user: {
         id: newUser._id,
@@ -42,10 +47,10 @@ export async function POST(req) {
         email: newUser.email,
         role: newUser.role
       }
-    }, { status: 201 });
+    }, { status: 201 }));
 
   } catch (error) {
     console.error('Registration Error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return withCors(NextResponse.json({ error: 'Internal Server Error' }, { status: 500 }));
   }
 }

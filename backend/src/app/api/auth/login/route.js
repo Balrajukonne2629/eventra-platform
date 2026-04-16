@@ -3,6 +3,11 @@ import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import { signToken } from '@/lib/auth';
+import { preflightResponse, withCors } from '@/lib/cors';
+
+export async function OPTIONS() {
+  return preflightResponse();
+}
 
 export async function POST(req) {
   try {
@@ -10,7 +15,7 @@ export async function POST(req) {
     const { email, password } = body;
 
     if (!email || !password) {
-      return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
+      return withCors(NextResponse.json({ error: 'Email and password are required' }, { status: 400 }));
     }
 
     await dbConnect();
@@ -18,13 +23,13 @@ export async function POST(req) {
     // Check if user exists
     const user = await User.findOne({ email });
     if (!user) {
-      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+      return withCors(NextResponse.json({ error: 'Invalid credentials' }, { status: 401 }));
     }
 
     // Compare passwords
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+      return withCors(NextResponse.json({ error: 'Invalid credentials' }, { status: 401 }));
     }
 
     // Generate JWT token
@@ -53,10 +58,10 @@ export async function POST(req) {
       path: '/',          // Cookie available everywhere
     });
 
-    return response;
+    return withCors(response);
 
   } catch (error) {
     console.error('Login Error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return withCors(NextResponse.json({ error: 'Internal Server Error' }, { status: 500 }));
   }
 }

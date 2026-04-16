@@ -4,15 +4,19 @@ import Event from "@/models/Event";
 import User from "@/models/User";
 import { verifyToken } from "@/lib/auth";
 import nodemailer from "nodemailer";
+import { preflightResponse, withCors } from "@/lib/cors";
 
+export async function OPTIONS() {
+  return preflightResponse();
+}
 
 export async function GET() {
   try {
     await connectDB();
     const events = await Event.find({}).sort({ createdAt: -1 }); // Get all events, newest first
-    return NextResponse.json({ success: true, count: events.length, data: events }, { status: 200 });
+    return withCors(NextResponse.json({ success: true, count: events.length, data: events }, { status: 200 }));
   } catch (error) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return withCors(NextResponse.json({ success: false, error: error.message }, { status: 500 }));
   }
 }
 
@@ -24,15 +28,15 @@ export async function POST(request) {
     // 1.5 Extract logged-in user details
     const token = request.cookies.get('eventra_token')?.value;
     if (!token) {
-      return NextResponse.json({ message: "Unauthorized. Please log in first." }, { status: 401 });
+      return withCors(NextResponse.json({ message: "Unauthorized. Please log in first." }, { status: 401 }));
     }
     const decoded = await verifyToken(token);
     if (!decoded) {
-      return NextResponse.json({ message: "Session expired or invalid. Please log in again." }, { status: 401 });
+      return withCors(NextResponse.json({ message: "Session expired or invalid. Please log in again." }, { status: 401 }));
     }
     const organizer = await User.findById(decoded.id);
     if (!organizer) {
-      return NextResponse.json({ message: "User not found" }, { status: 404 });
+      return withCors(NextResponse.json({ message: "User not found" }, { status: 404 }));
     }
 
     // 2. Parse the request body early to use its metadata
@@ -46,25 +50,25 @@ export async function POST(request) {
 
     // 3. Validate required fields
     if (!title || !description || !club || !category || !teamSize || !maxTeams || !deadline || !facultyEmail) {
-      return NextResponse.json(
+      return withCors(NextResponse.json(
         { message: "All fields are required, including faculty email" },
         { status: 400 }
-      );
+      ));
     }
 
     // 4. Validate specific constraints
     if (category !== "Technical" && category !== "Non-Technical") {
-      return NextResponse.json(
+      return withCors(NextResponse.json(
         { message: "Category must be either 'Technical' or 'Non-Technical'" },
         { status: 400 }
-      );
+      ));
     }
 
     if (![1, 2, 4].includes(Number(teamSize))) {
-      return NextResponse.json(
+      return withCors(NextResponse.json(
         { message: "Team size must be 1, 2, or 4" },
         { status: 400 }
-      );
+      ));
     }
 
     // 5. Create and save the event in MongoDB
@@ -134,22 +138,22 @@ export async function POST(request) {
     }
 
     // 7. Return success response
-    return NextResponse.json(
+    return withCors(NextResponse.json(
       { 
         success: true,
         message: "Event created and email notification sent", 
         event: newEvent 
       },
       { status: 201 } // 201 means "Created"
-    );
+    ));
 
   } catch (error) {
     // 7. Handle any errors gracefully
     console.error("Error creating event:", error);
     
-    return NextResponse.json(
+    return withCors(NextResponse.json(
       { message: "Failed to create event", error: error.message },
       { status: 500 } // 500 means "Internal Server Error"
-    );
+    ));
   }
 }
