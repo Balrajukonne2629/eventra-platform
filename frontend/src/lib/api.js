@@ -1,8 +1,7 @@
 import { getUser } from "./auth-util";
 
 // Since we have a proxy rewrite in next.config.js, we can just hit /api
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://eventra-platform.onrender.com/api';
 
 /**
  * Sends a POST request to Create an Event.
