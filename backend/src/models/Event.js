@@ -30,6 +30,14 @@ const EventSchema = new mongoose.Schema({
     type: Date,
     required: [true, 'Please provide a registration deadline'],
   },
+  facultyEmail: {
+    type: String,
+    required: [true, 'Please provide faculty email'],
+    match: [
+      /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
+      'Please add a valid email'
+    ]
+  }
 }, { timestamps: true });
 
 export default mongoose.models.Event || mongoose.model('Event', EventSchema);
