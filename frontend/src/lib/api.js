@@ -1,7 +1,22 @@
 import { getUser } from "./auth-util";
 
-// Since we have a proxy rewrite in next.config.js, we can just hit /api
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://eventra-platform.onrender.com/api';
+
+async function readJsonResponse(res) {
+  if (!res.ok) {
+    const text = await res.text();
+    return { ok: false, message: text };
+  }
+
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    return { ok: false, message: 'Invalid JSON response (HTML returned)' };
+  }
+
+  return data;
+}
 
 /**
  * Sends a POST request to Create an Event.
@@ -29,7 +44,7 @@ export async function createEvent(data) {
       body: JSON.stringify(eventData),
     });
 
-    const result = await res.json();
+    const result = await readJsonResponse(res);
     return { status: res.status, ok: res.ok, ...result };
   } catch (error) {
     console.error('Error in createEvent network request: ', error);
@@ -43,9 +58,10 @@ export async function createEvent(data) {
 export async function getEvents() {
   try {
     const res = await fetch(`${API_URL}/events`, {
-      method: 'GET'
+      method: 'GET',
+      credentials: 'include'
     });
-    const result = await res.json();
+    const result = await readJsonResponse(res);
     return { status: res.status, ok: res.ok, ...result };
   } catch (error) {
     console.error('Error in getEvents network request: ', error);

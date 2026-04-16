@@ -6,6 +6,8 @@ import Link from "next/link";
 import InputField from "@/components/InputField";
 import Button from "@/components/Button";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://eventra-platform.onrender.com/api';
+
 export default function RegisterPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
@@ -34,9 +36,10 @@ export default function RegisterPage() {
     setError("");
 
     try {
-      const res = await fetch("/api/auth/register", {
+      const res = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           name: formData.name,
           email: formData.email,
@@ -45,10 +48,15 @@ export default function RegisterPage() {
         }),
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(data.error || data.message || "Registration failed");
+        const text = await res.text();
+        throw new Error(text || "Registration failed");
+      }
+
+      try {
+        await res.json();
+      } catch {
+        throw new Error("Invalid JSON response (HTML returned)");
       }
 
       // Store in localStorage directly after successful register 

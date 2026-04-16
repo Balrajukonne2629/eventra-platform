@@ -7,6 +7,8 @@ import InputField from "@/components/InputField";
 import Button from "@/components/Button";
 import { loginUser, getUser } from "@/lib/auth-util";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://eventra-platform.onrender.com/api';
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -42,16 +44,23 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const res = await fetch("/api/auth/login", {
+      const res = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ email, password })
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(data.error || data.message || "Invalid credentials");
+        const text = await res.text();
+        throw new Error(text || "Invalid credentials");
+      }
+
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("Invalid JSON response (HTML returned)");
       }
 
       // Successful login API call, now retrieve stored metadata if we have cache from register
