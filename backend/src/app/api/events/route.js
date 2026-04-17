@@ -26,7 +26,8 @@ export async function POST(request) {
     await connectDB();
 
     // 1.5 Extract logged-in user details
-    const token = request.cookies.get('eventra_token')?.value;
+    const auth = request.headers.get('authorization');
+    const token = auth?.split(' ')[1];
     if (!token) {
       return withCors(NextResponse.json({ message: "Unauthorized. Please log in first." }, { status: 401 }));
     }

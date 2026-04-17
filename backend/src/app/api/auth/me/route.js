@@ -10,8 +10,8 @@ export async function OPTIONS() {
 
 export async function GET(req) {
   try {
-    // Read the token directly from the cookies attached to the request
-    const token = req.cookies.get('eventra_token')?.value;
+    const auth = req.headers.get('authorization');
+    const token = auth?.split(' ')[1];
 
     if (!token) {
       return withCors(NextResponse.json({ error: 'Not authenticated' }, { status: 401 }));

@@ -39,26 +39,15 @@ export async function POST(req) {
       role: user.role
     });
 
-    // Create response
-    const response = NextResponse.json({
+    return withCors(NextResponse.json({
       message: 'Login successful',
+      token,
       user: {
         id: user._id,
         email: user.email,
         role: user.role
       }
-    }, { status: 200 });
-
-    // Set HTTP-only secure cookie
-    response.cookies.set('eventra_token', token, {
-      httpOnly: true,     // Prevents client-side JS from reading the cookie
-      secure: true,
-      sameSite: 'none',
-      maxAge: 60 * 60 * 2, // 2 hours in seconds
-      path: '/',          // Cookie available everywhere
-    });
-
-    return withCors(response);
+    }, { status: 200 }));
 
   } catch (error) {
     console.error('Login Error:', error);

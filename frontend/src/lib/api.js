@@ -2,6 +2,19 @@ import { getUser } from "./auth-util";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://eventra-platform.onrender.com/api';
 
+function getAuthHeaders() {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return headers;
+}
+
 async function readJsonResponse(res) {
   if (!res.ok) {
     const text = await res.text();
@@ -20,7 +33,7 @@ async function readJsonResponse(res) {
 
 /**
  * Sends a POST request to Create an Event.
- * Ensures cookies are included so the API can read the JWT.
+ * Sends JWT in Authorization header.
  */
 export async function createEvent(data) {
   try {
@@ -36,11 +49,7 @@ export async function createEvent(data) {
 
     const res = await fetch(`${API_URL}/events`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      // Essential for cross-origin or same-domain authenticating via HTTP-only cookes
-      credentials: 'include',
+      headers: getAuthHeaders(),
       body: JSON.stringify(eventData),
     });
 
@@ -59,7 +68,7 @@ export async function getEvents() {
   try {
     const res = await fetch(`${API_URL}/events`, {
       method: 'GET',
-      credentials: 'include'
+      headers: getAuthHeaders()
     });
     const result = await readJsonResponse(res);
     return { status: res.status, ok: res.ok, ...result };

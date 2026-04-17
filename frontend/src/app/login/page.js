@@ -47,7 +47,6 @@ export default function LoginPage() {
       const res = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ email, password })
       });
 
@@ -62,6 +61,12 @@ export default function LoginPage() {
       } catch {
         throw new Error("Invalid JSON response (HTML returned)");
       }
+
+      if (!data.token) {
+        throw new Error("Authentication token missing in response");
+      }
+
+      localStorage.setItem("token", data.token);
 
       // Successful login API call, now retrieve stored metadata if we have cache from register
       const cached = getUser() || {};
