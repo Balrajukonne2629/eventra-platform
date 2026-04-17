@@ -20,14 +20,15 @@ export async function GET() {
   }
 }
 
-export async function POST(request) {
+export async function POST(req) {
   try {
     // 1. Connect to the database
     await connectDB();
 
     // 1.5 Extract logged-in user details
-    const auth = request.headers.get('authorization');
+    const auth = req.headers.get('authorization');
     const token = auth?.split(' ')[1];
+    console.log('Auth token (events route):', token);
     if (!token) {
       return withCors(NextResponse.json({ message: "Unauthorized. Please log in first." }, { status: 401 }));
     }
@@ -41,7 +42,7 @@ export async function POST(request) {
     }
 
     // 2. Parse the request body early to use its metadata
-    const body = await request.json();
+    const body = await req.json();
     const { title, description, club, category, teamSize, maxTeams, deadline, facultyEmail } = body;
 
     const orgName = organizer.name || "Unknown";

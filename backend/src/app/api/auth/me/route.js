@@ -12,6 +12,7 @@ export async function GET(req) {
   try {
     const auth = req.headers.get('authorization');
     const token = auth?.split(' ')[1];
+    console.log('Auth token (me route):', token);
 
     if (!token) {
       return withCors(NextResponse.json({ error: 'Not authenticated' }, { status: 401 }));
