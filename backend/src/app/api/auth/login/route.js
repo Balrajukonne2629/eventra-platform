@@ -52,8 +52,8 @@ export async function POST(req) {
     // Set HTTP-only secure cookie
     response.cookies.set('eventra_token', token, {
       httpOnly: true,     // Prevents client-side JS from reading the cookie
-      secure: process.env.NODE_ENV === 'production', // Use secure cookies in production (HTTPS)
-      sameSite: 'strict', // Protects against CSRF attacks
+      secure: true,
+      sameSite: 'none',
       maxAge: 60 * 60 * 2, // 2 hours in seconds
       path: '/',          // Cookie available everywhere
     });
