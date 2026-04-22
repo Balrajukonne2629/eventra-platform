@@ -23,11 +23,11 @@ export default function OrganizerDashboard() {
     if (authLoading) return;
 
     if (!user) {
-      window.location.href = "/login";
+      router.replace("/login");
       return;
     }
     if (user.role !== 'organizer') {
-      window.location.href = "/";
+      router.replace("/");
       return;
     }
 
@@ -91,11 +91,11 @@ export default function OrganizerDashboard() {
       <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="page-title text-4xl font-extrabold sm:text-6xl">
-            Welcome, <span className="text-emerald-400">{user.name}</span>!
+            Welcome, <span className="text-emerald-400">{user?.name || "Organizer"}</span>!
           </h1>
           <div className="mt-5 flex flex-wrap justify-center gap-3 text-sm font-semibold text-slate-200 sm:justify-start">
-            <span className="rounded-xl border border-slate-600/80 bg-slate-900/80 px-4 py-2">Roll No: {user.rollNumber}</span>
-            <span className="rounded-xl border border-slate-600/80 bg-slate-900/80 px-4 py-2">Dept: {user.department}</span>
+            <span className="rounded-xl border border-slate-600/80 bg-slate-900/80 px-4 py-2">Roll No: {user?.rollNumber || "N/A"}</span>
+            <span className="rounded-xl border border-slate-600/80 bg-slate-900/80 px-4 py-2">Dept: {user?.department || "N/A"}</span>
             <span className="rounded-xl border border-slate-600/80 bg-slate-900/80 px-4 py-2">Events: {events.length}</span>
           </div>
           <p className="muted-copy mt-6 max-w-2xl text-center text-lg leading-relaxed sm:text-left sm:text-2xl">

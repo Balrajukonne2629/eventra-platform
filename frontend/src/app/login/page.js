@@ -2,12 +2,14 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import InputField from "@/components/InputField";
 import Button from "@/components/Button";
 import Alert from "@/components/Alert";
 import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
+  const router = useRouter();
   const { user, isLoading: authLoading, login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,9 +22,9 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user) {
-      window.location.href = '/';
+      router.replace('/');
     }
-  }, [user]);
+  }, [user, router]);
 
   if (authLoading) return <div className="min-h-[70vh]" />;
 
@@ -42,7 +44,7 @@ export default function LoginPage() {
       setSuccess("Welcome back. Redirecting to your dashboard...");
 
       setTimeout(() => {
-        window.location.href = "/";
+        router.replace("/");
       }, 700);
     } catch (err) {
       const msg = String(err?.message || "Login failed").toLowerCase();

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://eventra-platform.onrender.com/api";
 const PUBLIC_ROUTES = new Set(["/login", "/register"]);
+const AUTH_EXPIRED_EVENT = 'auth:unauthorized';
 
 const AuthContext = createContext(null);
 
@@ -15,7 +16,9 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const clearAuth = () => {
-    localStorage.removeItem("token");
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem("token");
+    }
     setUser(null);
   };
 
@@ -26,6 +29,7 @@ export function AuthProvider({ children }) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
+      credentials: 'include',
     });
 
     if (!res.ok) {
@@ -53,6 +57,7 @@ export function AuthProvider({ children }) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
+      credentials: 'include',
     });
 
     if (!res.ok) {
@@ -123,10 +128,22 @@ export function AuthProvider({ children }) {
     };
   }, [pathname, router]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const onUnauthorized = () => {
+      clearAuth();
+    };
+
+    window.addEventListener(AUTH_EXPIRED_EVENT, onUnauthorized);
+    return () => {
+      window.removeEventListener(AUTH_EXPIRED_EVENT, onUnauthorized);
+    };
+  }, []);
+
   const value = useMemo(() => ({
     user,
     isLoading,
-    setUser,
     login,
     logout,
   }), [user, isLoading]);

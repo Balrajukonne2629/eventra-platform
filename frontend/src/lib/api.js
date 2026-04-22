@@ -2,11 +2,13 @@ import { getToken } from "./auth-util";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://eventra-platform.onrender.com/api';
 const SESSION_EXPIRED_MESSAGE = 'Session expired. Please login again';
+const AUTH_EXPIRED_EVENT = 'auth:unauthorized';
 
 function handleUnauthorized() {
   if (typeof window === 'undefined') return;
 
   localStorage.removeItem('token');
+  window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT));
   if (window.location.pathname !== '/login') {
     window.location.replace('/login');
   }
@@ -41,9 +43,24 @@ function getAuthHeaders(token) {
 function requireToken() {
   const token = getToken();
   if (!token) {
+    handleUnauthorized();
     return { ok: false, message: SESSION_EXPIRED_MESSAGE };
   }
   return { ok: true, token };
+}
+
+function getAuthFetchOptions(method, token, body) {
+  const options = {
+    method,
+    headers: getAuthHeaders(token),
+    credentials: 'include',
+  };
+
+  if (body !== undefined) {
+    options.body = JSON.stringify(body);
+  }
+
+  return options;
 }
 
 async function readJsonResponse(res) {
@@ -79,9 +96,7 @@ export async function createEvent(data) {
     }
 
     const res = await fetch(`${API_URL}/events`, {
-      method: 'POST',
-      headers: getAuthHeaders(auth.token),
-      body: JSON.stringify(data),
+      ...getAuthFetchOptions('POST', auth.token, data),
     });
 
     const result = await readJsonResponse(res);
@@ -123,8 +138,7 @@ export async function getEvents(options = {}) {
     const query = params.toString() ? `?${params.toString()}` : '';
 
     const res = await fetch(`${API_URL}/events${query}`, {
-      method: 'GET',
-      headers: getAuthHeaders(auth.token)
+      ...getAuthFetchOptions('GET', auth.token),
     });
     const result = await readJsonResponse(res);
     return { status: res.status, ok: res.ok, ...result };
@@ -142,9 +156,7 @@ export async function registerForEvent(payload) {
     }
 
     const res = await fetch(`${API_URL}/register`, {
-      method: 'POST',
-      headers: getAuthHeaders(auth.token),
-      body: JSON.stringify(payload),
+      ...getAuthFetchOptions('POST', auth.token, payload),
     });
 
     const result = await readJsonResponse(res);
@@ -167,8 +179,7 @@ export async function getParticipants(eventId) {
     }
 
     const res = await fetch(`${API_URL}/events/${eventId}/participants`, {
-      method: 'GET',
-      headers: getAuthHeaders(auth.token),
+      ...getAuthFetchOptions('GET', auth.token),
     });
 
     const result = await readJsonResponse(res);
@@ -191,8 +202,7 @@ export async function deleteEvent(eventId) {
     }
 
     const res = await fetch(`${API_URL}/events/${eventId}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders(auth.token),
+      ...getAuthFetchOptions('DELETE', auth.token),
     });
 
     const result = await readJsonResponse(res);
@@ -211,8 +221,7 @@ export async function getMyRegistrations() {
     }
 
     const res = await fetch(`${API_URL}/registrations/my`, {
-      method: 'GET',
-      headers: getAuthHeaders(auth.token),
+      ...getAuthFetchOptions('GET', auth.token),
     });
 
     const result = await readJsonResponse(res);

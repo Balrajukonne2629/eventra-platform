@@ -15,7 +15,12 @@ export default function RegisterModal({ event, onClose }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (activeUser) setUser(activeUser);
+    if (activeUser) {
+      setUser({
+        name: activeUser.name || "",
+        rollNumber: activeUser.rollNumber || "",
+      });
+    }
   }, [activeUser]);
 
   const handleSubmit = async (e) => {
@@ -98,7 +103,7 @@ export default function RegisterModal({ event, onClose }) {
               />
               <InputField 
                 label="Roll Number" 
-                value={user.rollNumber} 
+                value={user.rollNumber || "N/A"} 
                 onChange={() => {}} 
                 placeholder="Your Roll Number"
                 disabled

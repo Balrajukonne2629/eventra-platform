@@ -18,7 +18,12 @@ export default function MyEventsPage() {
     if (authLoading) return;
 
     if (!user) {
-      window.location.href = "/login";
+      router.replace("/login");
+      return;
+    }
+
+    if (user.role !== 'student') {
+      router.replace(user.role === 'organizer' ? '/organizer' : '/');
       return;
     }
 

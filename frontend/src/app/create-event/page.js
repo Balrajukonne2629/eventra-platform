@@ -14,9 +14,9 @@ export default function CreateEventPage() {
     if (authLoading) return;
 
     if (!user) {
-      window.location.href = "/login";
+      router.replace("/login");
     } else if (user.role !== "organizer") {
-      window.location.href = "/";
+      router.replace("/");
     } else {
       setIsAuth(true);
     }
