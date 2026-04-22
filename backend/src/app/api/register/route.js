@@ -29,10 +29,10 @@ export async function POST(req) {
     }
 
     const body = await req.json();
-    const { eventId, userId, teamName, members } = body;
+    const { eventId, userId, teamName, members, rollNumber, department } = body;
 
-    if (!eventId || !userId || !teamName || !Array.isArray(members) || members.length === 0) {
-      return errorResponse('eventId, userId, teamName and members[] are required', 400);
+    if (!eventId || !userId || !teamName || !Array.isArray(members) || members.length === 0 || typeof rollNumber !== 'string' || !rollNumber.trim() || typeof department !== 'string' || !department.trim()) {
+      return errorResponse('eventId, userId, teamName, members[], rollNumber and department are required', 400);
     }
 
     if (typeof teamName !== 'string') {
@@ -93,6 +93,8 @@ export async function POST(req) {
       eventId,
       userId,
       teamName: normalizedTeamName,
+      rollNumber: rollNumber.trim(),
+      department: department.trim(),
       members,
     });
 

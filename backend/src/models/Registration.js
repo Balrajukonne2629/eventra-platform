@@ -17,6 +17,16 @@ const RegistrationSchema = new mongoose.Schema(
       required: [true, 'teamName is required'],
       trim: true,
     },
+    rollNumber: {
+      type: String,
+      required: [true, 'rollNumber is required'],
+      trim: true,
+    },
+    department: {
+      type: String,
+      required: [true, 'department is required'],
+      trim: true,
+    },
     members: [
       {
         type: mongoose.Schema.Types.ObjectId,

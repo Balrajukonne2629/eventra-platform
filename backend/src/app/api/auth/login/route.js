@@ -43,11 +43,6 @@ export async function POST(req) {
       'Login successful',
       {
         token,
-        user: {
-          id: user._id,
-          email: user.email,
-          role: user.role,
-        },
       },
       200
     );

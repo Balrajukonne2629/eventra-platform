@@ -95,14 +95,16 @@ export async function createEvent(data) {
       return auth;
     }
 
+    console.debug('[API] POST /events', data);
     const res = await fetch(`${API_URL}/events`, {
       ...getAuthFetchOptions('POST', auth.token, data),
     });
 
     const result = await readJsonResponse(res);
+    console.debug('[API] POST /events response:', result);
     return { status: res.status, ok: res.ok, ...result };
   } catch (error) {
-    console.error('Error in createEvent network request: ', error);
+    console.error('[API] createEvent error:', error);
     return { ok: false, message: error.message || 'Networking error occurred' };
   }
 }
@@ -137,13 +139,15 @@ export async function getEvents(options = {}) {
 
     const query = params.toString() ? `?${params.toString()}` : '';
 
+    console.debug('[API] GET /events', options);
     const res = await fetch(`${API_URL}/events${query}`, {
       ...getAuthFetchOptions('GET', auth.token),
     });
     const result = await readJsonResponse(res);
+    console.debug('[API] GET /events response: count=', Array.isArray(result.data) ? result.data.length : 'n/a');
     return { status: res.status, ok: res.ok, ...result };
   } catch (error) {
-    console.error('Error in getEvents network request: ', error);
+    console.error('[API] getEvents error:', error);
     return { ok: false, success: false, message: error.message || 'Networking error occurred', data: [] };
   }
 }
@@ -155,14 +159,16 @@ export async function registerForEvent(payload) {
       return { ok: false, success: false, message: 'Unauthorized' };
     }
 
+    console.debug('[API] POST /register', payload);
     const res = await fetch(`${API_URL}/register`, {
       ...getAuthFetchOptions('POST', auth.token, payload),
     });
 
     const result = await readJsonResponse(res);
+    console.debug('[API] POST /register response:', result);
     return { status: res.status, ok: res.ok, ...result };
   } catch (error) {
-    console.error('Error in registerForEvent network request: ', error);
+    console.error('[API] registerForEvent error:', error);
     return { ok: false, success: false, message: error.message || 'Networking error occurred' };
   }
 }

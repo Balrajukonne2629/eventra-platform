@@ -26,14 +26,12 @@ export async function GET(req) {
     return successResponse(
       'Authenticated successfully',
       {
-        user: {
-          id: user._id.toString(),
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          rollNumber: user.rollNumber,
-          department: user.department,
-        },
+        id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        rollNumber: user.rollNumber,
+        department: user.department,
       },
       200
     );

@@ -47,7 +47,9 @@ export default function RegisterPage() {
           name: formData.name,
           email: formData.email,
           password: formData.password,
-          role: formData.role
+          role: formData.role,
+          rollNumber: formData.rollNumber.trim() || undefined,
+          department: formData.department.trim() || undefined,
         }),
       });
 

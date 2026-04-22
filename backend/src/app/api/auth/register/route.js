@@ -13,7 +13,7 @@ export async function OPTIONS() {
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { name, email, password, role } = body;
+    const { name, email, password, role, rollNumber, department } = body;
 
     // Validate incoming data
     if (typeof name !== 'string' || !name.trim() || typeof email !== 'string' || !email.trim() || typeof password !== 'string' || password.length < 6) {
@@ -46,7 +46,9 @@ export async function POST(req) {
       name: name.trim(),
       email: normalizedEmail,
       password: hashedPassword,
-      role: role || 'student', // Fallback to 'student' if role is not provided (as defined in the Schema)
+      role: role || 'student',
+      rollNumber: typeof rollNumber === 'string' ? rollNumber.trim() : undefined,
+      department: typeof department === 'string' ? department.trim() : undefined,
     });
 
     // Don't send password back in response
