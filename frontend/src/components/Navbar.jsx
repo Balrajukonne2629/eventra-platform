@@ -26,6 +26,12 @@ export default function Navbar() {
             <Link href={user?.role === 'organizer' ? '/organizer' : '/'} className="rounded-xl px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-white sm:px-4">
               Home
             </Link>
+
+            {user?.role === 'student' && (
+              <Link href="/my-events" className="rounded-xl px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-white sm:px-4">
+                My Events
+              </Link>
+            )}
             
             {user?.role === 'organizer' && (
               <Link href="/create-event" className="inline-flex items-center gap-1 rounded-xl border border-blue-400/30 bg-blue-500/15 px-4 py-2 text-sm font-semibold text-blue-100 transition-all hover:border-blue-300/50 hover:bg-blue-500/25 hover:text-white">

@@ -16,6 +16,7 @@ export default function EventForm() {
     maxTeams: "",
     deadline: "",
     facultyEmail: "",
+    externalFormLink: "",
   });
 
   const [status, setStatus] = useState({ type: null, message: "" });
@@ -38,6 +39,19 @@ export default function EventForm() {
       return;
     }
 
+    if (formData.externalFormLink.trim()) {
+      try {
+        const parsed = new URL(formData.externalFormLink.trim());
+        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+          throw new Error("Invalid protocol");
+        }
+      } catch {
+        setStatus({ type: "error", message: "Please enter a valid external form URL." });
+        setIsLoading(false);
+        return;
+      }
+    }
+
     try {
       const response = await createEvent(formData);
 
@@ -45,7 +59,7 @@ export default function EventForm() {
         setStatus({ type: "success", message: "✅ Event Created & Faculty Notified" });
         setFormData({ // Reset form
           title: "", description: "", club: "", category: "Technical",
-          teamSize: "1", maxTeams: "", deadline: "", facultyEmail: "",
+          teamSize: "1", maxTeams: "", deadline: "", facultyEmail: "", externalFormLink: "",
         });
       } else {
         setStatus({ type: "error", message: response.message || "Failed to create event" });
@@ -147,6 +161,15 @@ export default function EventForm() {
             onChange={handleChange}
             placeholder="faculty@example.edu"
             required
+          />
+
+          <InputField
+            label="External Form Link (optional)"
+            name="externalFormLink"
+            type="url"
+            value={formData.externalFormLink}
+            onChange={handleChange}
+            placeholder="https://forms.google.com/..."
           />
         </div>
 

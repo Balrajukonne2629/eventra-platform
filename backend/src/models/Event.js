@@ -1,5 +1,14 @@
 import mongoose from 'mongoose';
 
+function isValidHttpUrl(value) {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 const EventSchema = new mongoose.Schema({
   organizerId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -43,6 +52,18 @@ const EventSchema = new mongoose.Schema({
       /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
       'Please add a valid email'
     ]
+  },
+  externalFormLink: {
+    type: String,
+    required: false,
+    trim: true,
+    validate: {
+      validator: (value) => {
+        if (!value) return true;
+        return isValidHttpUrl(value);
+      },
+      message: 'Please provide a valid external form URL',
+    },
   }
 }, { timestamps: true });
 

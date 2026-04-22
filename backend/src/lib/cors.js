@@ -21,3 +21,38 @@ export function preflightResponse() {
     headers: CORS_HEADERS,
   });
 }
+
+export function jsonResponse(payload, status = 200) {
+  const response = NextResponse.json(payload, {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  return withCors(response);
+}
+
+export function successResponse(message, data = null, status = 200, extra = {}) {
+  return jsonResponse(
+    {
+      success: true,
+      message,
+      data,
+      ...extra,
+    },
+    status
+  );
+}
+
+export function errorResponse(message, status = 400, data = null, extra = {}) {
+  return jsonResponse(
+    {
+      success: false,
+      message,
+      data,
+      ...extra,
+    },
+    status
+  );
+}

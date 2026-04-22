@@ -7,10 +7,8 @@ import Button from "@/components/Button";
 import Alert from "@/components/Alert";
 import { useAuth } from "@/context/AuthContext";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://eventra-platform.onrender.com/api';
-
 export default function LoginPage() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   // Usually login only requires email and password, but the current UI specifies a Role switch. 
@@ -40,29 +38,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const res = await fetch(`${API_URL}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
-      });
-
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "Invalid credentials");
-      }
-
-      let data;
-      try {
-        data = await res.json();
-      } catch {
-        throw new Error("Invalid JSON response (HTML returned)");
-      }
-
-      if (!data.token) {
-        throw new Error("Authentication token missing in response");
-      }
-
-      localStorage.setItem("token", data.token);
+      await login({ email, password });
       setSuccess("Welcome back. Redirecting to your dashboard...");
 
       setTimeout(() => {

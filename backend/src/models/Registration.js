@@ -29,5 +29,6 @@ const RegistrationSchema = new mongoose.Schema(
 );
 
 RegistrationSchema.index({ eventId: 1, teamName: 1 }, { unique: true });
+RegistrationSchema.index({ eventId: 1, userId: 1 }, { unique: true });
 
 export default mongoose.models.Registration || mongoose.model('Registration', RegistrationSchema);

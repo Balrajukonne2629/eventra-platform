@@ -2,15 +2,27 @@ import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import connectDB from "@/lib/db";
 import Event from "@/models/Event";
-import User from "@/models/User";
 import nodemailer from "nodemailer";
-import { preflightResponse, withCors } from "@/lib/cors";
+import { errorResponse, preflightResponse, successResponse } from "@/lib/cors";
 import { requireAuth } from "@/lib/auth-middleware";
 
 const EMAIL_REGEX = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
 
 function isNonEmptyString(value) {
   return typeof value === 'string' && value.trim().length > 0;
+}
+
+function escapeRegex(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function isValidHttpUrl(value) {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 export async function OPTIONS() {
@@ -23,50 +35,67 @@ export async function GET(req) {
 
     const authResult = await requireAuth(req);
     if (!authResult.ok) {
-      return withCors(NextResponse.json({ success: false, error: authResult.error }, { status: authResult.status }));
+      return errorResponse(authResult.error, authResult.status);
     }
 
     const { searchParams } = new URL(req.url);
     const organizerId = searchParams.get('organizerId');
+    const search = searchParams.get('search');
+    const club = searchParams.get('club');
+    const category = searchParams.get('category');
 
     let query = {};
     if (organizerId) {
       if (!mongoose.Types.ObjectId.isValid(organizerId)) {
-        return withCors(NextResponse.json({ success: false, error: 'Invalid organizerId' }, { status: 400 }));
+        return errorResponse('Invalid organizerId', 400);
       }
 
       if (authResult.userId !== organizerId) {
-        return withCors(NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 }));
+        return errorResponse('Forbidden', 403);
       }
 
       query = { organizerId };
     }
 
+    if (typeof search === 'string' && search.trim()) {
+      query.title = { $regex: escapeRegex(search.trim()), $options: 'i' };
+    }
+
+    if (typeof club === 'string' && club.trim()) {
+      query.club = club.trim();
+    }
+
+    if (typeof category === 'string' && category.trim()) {
+      query.category = category.trim();
+    }
+
     const events = await Event.find(query).sort({ createdAt: -1 }); // Get events, newest first
-    return withCors(NextResponse.json({ success: true, count: events.length, data: events }, { status: 200 }));
+    return successResponse('Events fetched successfully', events, 200, { count: events.length });
   } catch (error) {
-    return withCors(NextResponse.json({ success: false, error: error.message }, { status: 500 }));
+    return errorResponse('Internal Server Error', 500);
   }
 }
 
 export async function POST(req) {
   try {
-    // 1. Connect to the database
-    await connectDB();
-
-    // 1.5 Extract logged-in user details
+    // 1. Extract logged-in user details
     const authResult = await requireAuth(req);
     if (!authResult.ok) {
-      return withCors(NextResponse.json({ message: authResult.error }, { status: authResult.status }));
+      return errorResponse(authResult.error, authResult.status);
     }
-    const organizer = await User.findById(authResult.userId);
-    if (!organizer) {
-      return withCors(NextResponse.json({ message: "User not found" }, { status: 404 }));
+
+    if (authResult.userRole !== 'organizer') {
+      return errorResponse('Forbidden', 403);
     }
+
+    // 1.5 Connect to the database
+    await connectDB();
+
+    const organizer = authResult.user;
 
     // 2. Parse the request body early to use its metadata
     const body = await req.json();
-    const { title, description, club, category, teamSize, maxTeams, deadline, facultyEmail } = body;
+    const { title, description, club, category, teamSize, maxTeams, deadline, facultyEmail, externalFormLink } = body;
 
     const orgName = organizer.name?.trim() || "Not Provided";
     const orgEmail = organizer.email?.trim() || "Not Provided";
@@ -75,41 +104,37 @@ export async function POST(req) {
 
     // 3. Validate required fields
     if (!isNonEmptyString(title) || !isNonEmptyString(description) || !isNonEmptyString(club) || !isNonEmptyString(category) || teamSize === undefined || maxTeams === undefined || !deadline || !isNonEmptyString(facultyEmail)) {
-      return withCors(NextResponse.json(
-        { message: "All fields are required, including faculty email" },
-        { status: 400 }
-      ));
+      return errorResponse('All fields are required, including faculty email', 400);
     }
 
     if (!EMAIL_REGEX.test(facultyEmail)) {
-      return withCors(NextResponse.json({ message: 'Please provide a valid faculty email' }, { status: 400 }));
+      return errorResponse('Please provide a valid faculty email', 400);
+    }
+
+    const normalizedExternalFormLink = typeof externalFormLink === 'string' ? externalFormLink.trim() : '';
+    if (normalizedExternalFormLink && !isValidHttpUrl(normalizedExternalFormLink)) {
+      return errorResponse('Please provide a valid external form URL', 400);
     }
 
     // 4. Validate specific constraints
     if (category !== "Technical" && category !== "Non-Technical") {
-      return withCors(NextResponse.json(
-        { message: "Category must be either 'Technical' or 'Non-Technical'" },
-        { status: 400 }
-      ));
+      return errorResponse("Category must be either 'Technical' or 'Non-Technical'", 400);
     }
 
     if (!Number.isFinite(Number(teamSize)) || !Number.isFinite(Number(maxTeams))) {
-      return withCors(NextResponse.json({ message: 'teamSize and maxTeams must be valid numbers' }, { status: 400 }));
+      return errorResponse('teamSize and maxTeams must be valid numbers', 400);
     }
 
     if (![1, 2, 4].includes(Number(teamSize))) {
-      return withCors(NextResponse.json(
-        { message: "Team size must be 1, 2, or 4" },
-        { status: 400 }
-      ));
+      return errorResponse('Team size must be 1, 2, or 4', 400);
     }
 
     if (Number(maxTeams) <= 0) {
-      return withCors(NextResponse.json({ message: 'maxTeams must be greater than 0' }, { status: 400 }));
+      return errorResponse('maxTeams must be greater than 0', 400);
     }
 
     if (Number.isNaN(new Date(deadline).getTime())) {
-      return withCors(NextResponse.json({ message: 'deadline must be a valid date' }, { status: 400 }));
+      return errorResponse('deadline must be a valid date', 400);
     }
 
     // 5. Create and save the event in MongoDB
@@ -123,6 +148,7 @@ export async function POST(req) {
       maxTeams: Number(maxTeams),
       deadline: new Date(deadline),
       facultyEmail,
+      externalFormLink: normalizedExternalFormLink || undefined,
     });
 
     // 6. Send email notification to faculty
@@ -180,22 +206,12 @@ export async function POST(req) {
     }
 
     // 7. Return success response
-    return withCors(NextResponse.json(
-      { 
-        success: true,
-        message: "Event created and email notification sent", 
-        event: newEvent 
-      },
-      { status: 201 } // 201 means "Created"
-    ));
+    return successResponse('Event created and email notification sent', newEvent, 201);
 
   } catch (error) {
     // 7. Handle any errors gracefully
     console.error("Error creating event:", error);
     
-    return withCors(NextResponse.json(
-      { message: "Failed to create event", error: error.message },
-      { status: 500 } // 500 means "Internal Server Error"
-    ));
+    return errorResponse('Failed to create event', 500);
   }
 }

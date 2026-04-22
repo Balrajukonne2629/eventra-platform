@@ -3,6 +3,7 @@ import Button from "./Button";
 export default function EventCard({ event, onActionClick, actionLabel = "Register", isOrganizer = false, onDeleteClick }) {
   const deadlineDate = new Date(event.deadline).toLocaleDateString();
   const deadlineTime = new Date(event.deadline).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const externalFormLink = typeof event.externalFormLink === 'string' ? event.externalFormLink.trim() : '';
 
   return (
     <div className="surface-card rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:border-slate-500/70 flex h-full flex-col">
@@ -45,6 +46,17 @@ export default function EventCard({ event, onActionClick, actionLabel = "Registe
       </div>
       
       <div className="mt-6 space-y-2">
+        {externalFormLink && (
+          <a
+            href={externalFormLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="relative inline-flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-400/35 bg-cyan-500/15 px-6 py-3.5 text-base font-semibold tracking-wide text-cyan-100 transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-300/50 hover:bg-cyan-500/25 hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-300/70 focus:ring-offset-2 focus:ring-offset-slate-950"
+          >
+            Fill External Form
+          </a>
+        )}
+
         <Button
           onClick={() => onActionClick(event)}
           fullWidth

@@ -14,6 +14,77 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const clearAuth = () => {
+    localStorage.removeItem("token");
+    setUser(null);
+  };
+
+  const fetchCurrentUser = async (token) => {
+    const res = await fetch(`${API_URL}/auth/me`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to fetch current user");
+    }
+
+    const data = await res.json();
+    const userPayload = data?.data?.user || data?.user;
+    if (!userPayload) {
+      throw new Error("User payload missing");
+    }
+
+    return userPayload;
+  };
+
+  const logout = (shouldRedirect = true) => {
+    clearAuth();
+    if (shouldRedirect) {
+      router.replace("/login");
+    }
+  };
+
+  const login = async ({ email, password }) => {
+    const res = await fetch(`${API_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || "Invalid credentials");
+    }
+
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      throw new Error("Invalid JSON response (HTML returned)");
+    }
+
+    const token = data?.data?.token || data?.token;
+    if (!token) {
+      throw new Error("Authentication token missing in response");
+    }
+
+    // Persist only token; user profile is sourced from /auth/me
+    localStorage.setItem("token", token);
+
+    try {
+      const me = await fetchCurrentUser(token);
+      setUser(me);
+      return me;
+    } catch (error) {
+      logout(false);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     let active = true;
 
@@ -32,30 +103,10 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        const res = await fetch(`${API_URL}/auth/me`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!res.ok) {
-          localStorage.removeItem("token");
-          if (active) setUser(null);
-          if (!PUBLIC_ROUTES.has(pathname)) {
-            router.replace("/login");
-          }
-          return;
-        }
-
-        const data = await res.json();
-        if (active) {
-          setUser(data?.user || null);
-        }
+        const me = await fetchCurrentUser(token);
+        if (active) setUser(me);
       } catch {
-        localStorage.removeItem("token");
-        if (active) setUser(null);
+        logout(false);
         if (!PUBLIC_ROUTES.has(pathname)) {
           router.replace("/login");
         }
@@ -76,12 +127,9 @@ export function AuthProvider({ children }) {
     user,
     isLoading,
     setUser,
-    logout: () => {
-      localStorage.removeItem("token");
-      setUser(null);
-      router.replace("/login");
-    },
-  }), [user, isLoading, router]);
+    login,
+    logout,
+  }), [user, isLoading]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
-import { preflightResponse, withCors } from '@/lib/cors';
+import { errorResponse, preflightResponse, successResponse } from '@/lib/cors';
 
 const EMAIL_REGEX = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
 
@@ -17,16 +17,16 @@ export async function POST(req) {
 
     // Validate incoming data
     if (typeof name !== 'string' || !name.trim() || typeof email !== 'string' || !email.trim() || typeof password !== 'string' || password.length < 6) {
-      return withCors(NextResponse.json({ error: 'name, email and password (min 6 chars) are required' }, { status: 400 }));
+      return errorResponse('name, email and password (min 6 chars) are required', 400);
     }
 
     const normalizedEmail = email.trim().toLowerCase();
     if (!EMAIL_REGEX.test(normalizedEmail)) {
-      return withCors(NextResponse.json({ error: 'Please provide a valid email' }, { status: 400 }));
+      return errorResponse('Please provide a valid email', 400);
     }
 
     if (role && !['student', 'organizer'].includes(role)) {
-      return withCors(NextResponse.json({ error: 'Invalid role' }, { status: 400 }));
+      return errorResponse('Invalid role', 400);
     }
 
     await dbConnect();
@@ -34,7 +34,7 @@ export async function POST(req) {
     // Check if user already exists
     const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
-      return withCors(NextResponse.json({ error: 'User with this email already exists' }, { status: 409 }));
+      return errorResponse('User with this email already exists', 409);
     }
 
     // Hash the password securely
@@ -50,18 +50,21 @@ export async function POST(req) {
     });
 
     // Don't send password back in response
-    return withCors(NextResponse.json({
-      message: 'User registered successfully',
-      user: {
-        id: newUser._id,
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role
-      }
-    }, { status: 201 }));
+    return successResponse(
+      'User registered successfully',
+      {
+        user: {
+          id: newUser._id,
+          name: newUser.name,
+          email: newUser.email,
+          role: newUser.role,
+        },
+      },
+      201
+    );
 
   } catch (error) {
     console.error('Registration Error:', error);
-    return withCors(NextResponse.json({ error: 'Internal Server Error' }, { status: 500 }));
+    return errorResponse('Internal Server Error', 500);
   }
 }

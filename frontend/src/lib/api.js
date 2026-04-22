@@ -1,6 +1,16 @@
 import { getToken } from "./auth-util";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://eventra-platform.onrender.com/api';
+const SESSION_EXPIRED_MESSAGE = 'Session expired. Please login again';
+
+function handleUnauthorized() {
+  if (typeof window === 'undefined') return;
+
+  localStorage.removeItem('token');
+  if (window.location.pathname !== '/login') {
+    window.location.replace('/login');
+  }
+}
 
 function normalizeErrorMessage(rawText) {
   if (!rawText) return 'Something went wrong. Please try again.';
@@ -15,7 +25,7 @@ function normalizeErrorMessage(rawText) {
 
   const lower = String(message).toLowerCase();
   if (lower.includes('unauthorized') || lower.includes('not authenticated') || lower.includes('session expired')) {
-    return 'Please login first';
+    return SESSION_EXPIRED_MESSAGE;
   }
 
   return String(message);
@@ -31,13 +41,18 @@ function getAuthHeaders(token) {
 function requireToken() {
   const token = getToken();
   if (!token) {
-    return { ok: false, message: 'Unauthorized' };
+    return { ok: false, message: SESSION_EXPIRED_MESSAGE };
   }
   return { ok: true, token };
 }
 
 async function readJsonResponse(res) {
   if (!res.ok) {
+    if (res.status === 401) {
+      handleUnauthorized();
+      return { ok: false, message: SESSION_EXPIRED_MESSAGE };
+    }
+
     const text = await res.text();
     return { ok: false, message: normalizeErrorMessage(text) };
   }
@@ -87,7 +102,25 @@ export async function getEvents(options = {}) {
       return { ok: false, success: false, message: 'Unauthorized', data: [] };
     }
 
-    const query = options.organizerId ? `?organizerId=${encodeURIComponent(options.organizerId)}` : '';
+    const params = new URLSearchParams();
+
+    if (options.organizerId) {
+      params.set('organizerId', options.organizerId);
+    }
+
+    if (typeof options.search === 'string' && options.search.trim()) {
+      params.set('search', options.search.trim());
+    }
+
+    if (typeof options.club === 'string' && options.club.trim()) {
+      params.set('club', options.club.trim());
+    }
+
+    if (typeof options.category === 'string' && options.category.trim()) {
+      params.set('category', options.category.trim());
+    }
+
+    const query = params.toString() ? `?${params.toString()}` : '';
 
     const res = await fetch(`${API_URL}/events${query}`, {
       method: 'GET',
@@ -169,3 +202,24 @@ export async function deleteEvent(eventId) {
     return { ok: false, success: false, message: error.message || 'Networking error occurred' };
   }
 }
+
+export async function getMyRegistrations() {
+  try {
+    const auth = requireToken();
+    if (!auth.ok) {
+      return { ok: false, success: false, message: 'Unauthorized', data: [], count: 0 };
+    }
+
+    const res = await fetch(`${API_URL}/registrations/my`, {
+      method: 'GET',
+      headers: getAuthHeaders(auth.token),
+    });
+
+    const result = await readJsonResponse(res);
+    return { status: res.status, ok: res.ok, ...result };
+  } catch (error) {
+    console.error('Error in getMyRegistrations network request: ', error);
+    return { ok: false, success: false, message: error.message || 'Networking error occurred', data: [], count: 0 };
+  }
+}
+

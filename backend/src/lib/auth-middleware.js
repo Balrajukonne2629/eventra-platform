@@ -1,4 +1,6 @@
 import { verifyToken } from '@/lib/auth';
+import dbConnect from '@/lib/db';
+import User from '@/models/User';
 
 export async function requireAuth(req) {
   const auth = req.headers.get('authorization');
@@ -17,8 +19,15 @@ export async function requireAuth(req) {
     return { ok: false, status: 401, error: 'Session expired or invalid' };
   }
 
-  // Attach userId for downstream handlers.
-  req.userId = payload.id;
-  req.userRole = payload.role;
-  return { ok: true, userId: payload.id, userRole: payload.role };
+  await dbConnect();
+  const user = await User.findById(payload.id).select('-password');
+  if (!user) {
+    return { ok: false, status: 401, error: 'Session expired or invalid' };
+  }
+
+  // Attach full authenticated user for downstream handlers.
+  req.user = user;
+  req.userId = user._id.toString();
+  req.userRole = user.role;
+  return { ok: true, userId: user._id.toString(), userRole: user.role, user };
 }
