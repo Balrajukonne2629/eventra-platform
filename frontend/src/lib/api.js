@@ -1,24 +1,45 @@
-import { getUser } from "./auth-util";
+import { getToken } from "./auth-util";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://eventra-platform.onrender.com/api';
 
-function getAuthHeaders() {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-  const headers = {
-    'Content-Type': 'application/json',
-  };
+function normalizeErrorMessage(rawText) {
+  if (!rawText) return 'Something went wrong. Please try again.';
 
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
+  let message = rawText;
+  try {
+    const parsed = JSON.parse(rawText);
+    message = parsed.message || parsed.error || rawText;
+  } catch {
+    // Keep plain text responses as-is
   }
 
-  return headers;
+  const lower = String(message).toLowerCase();
+  if (lower.includes('unauthorized') || lower.includes('not authenticated') || lower.includes('session expired')) {
+    return 'Please login first';
+  }
+
+  return String(message);
+}
+
+function getAuthHeaders(token) {
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  };
+}
+
+function requireToken() {
+  const token = getToken();
+  if (!token) {
+    return { ok: false, message: 'Unauthorized' };
+  }
+  return { ok: true, token };
 }
 
 async function readJsonResponse(res) {
   if (!res.ok) {
     const text = await res.text();
-    return { ok: false, message: text };
+    return { ok: false, message: normalizeErrorMessage(text) };
   }
 
   let data;
@@ -37,20 +58,15 @@ async function readJsonResponse(res) {
  */
 export async function createEvent(data) {
   try {
-    // Inject frontend user details from localStorage to satisfy constraint #7
-    const user = getUser();
-    const eventData = {
-      ...data,
-      organizerName: user?.name || "Unknown",
-      organizerEmail: user?.email || "Unknown",
-      rollNumber: user?.rollNumber || "N/A",
-      department: user?.department || "N/A"
-    };
+    const auth = requireToken();
+    if (!auth.ok) {
+      return auth;
+    }
 
     const res = await fetch(`${API_URL}/events`, {
       method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(eventData),
+      headers: getAuthHeaders(auth.token),
+      body: JSON.stringify(data),
     });
 
     const result = await readJsonResponse(res);
@@ -64,16 +80,92 @@ export async function createEvent(data) {
 /**
  * Sends a GET request to fetch all Events.
  */
-export async function getEvents() {
+export async function getEvents(options = {}) {
   try {
-    const res = await fetch(`${API_URL}/events`, {
+    const auth = requireToken();
+    if (!auth.ok) {
+      return { ok: false, success: false, message: 'Unauthorized', data: [] };
+    }
+
+    const query = options.organizerId ? `?organizerId=${encodeURIComponent(options.organizerId)}` : '';
+
+    const res = await fetch(`${API_URL}/events${query}`, {
       method: 'GET',
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(auth.token)
     });
     const result = await readJsonResponse(res);
     return { status: res.status, ok: res.ok, ...result };
   } catch (error) {
     console.error('Error in getEvents network request: ', error);
-    return { ok: false, message: error.message || 'Networking error occurred' };
+    return { ok: false, success: false, message: error.message || 'Networking error occurred', data: [] };
+  }
+}
+
+export async function registerForEvent(payload) {
+  try {
+    const auth = requireToken();
+    if (!auth.ok) {
+      return { ok: false, success: false, message: 'Unauthorized' };
+    }
+
+    const res = await fetch(`${API_URL}/register`, {
+      method: 'POST',
+      headers: getAuthHeaders(auth.token),
+      body: JSON.stringify(payload),
+    });
+
+    const result = await readJsonResponse(res);
+    return { status: res.status, ok: res.ok, ...result };
+  } catch (error) {
+    console.error('Error in registerForEvent network request: ', error);
+    return { ok: false, success: false, message: error.message || 'Networking error occurred' };
+  }
+}
+
+export async function getParticipants(eventId) {
+  try {
+    const auth = requireToken();
+    if (!auth.ok) {
+      return { ok: false, success: false, message: 'Unauthorized', data: [] };
+    }
+
+    if (!eventId) {
+      return { ok: false, success: false, message: 'eventId is required', data: [] };
+    }
+
+    const res = await fetch(`${API_URL}/events/${eventId}/participants`, {
+      method: 'GET',
+      headers: getAuthHeaders(auth.token),
+    });
+
+    const result = await readJsonResponse(res);
+    return { status: res.status, ok: res.ok, ...result };
+  } catch (error) {
+    console.error('Error in getParticipants network request: ', error);
+    return { ok: false, success: false, message: error.message || 'Networking error occurred', data: [] };
+  }
+}
+
+export async function deleteEvent(eventId) {
+  try {
+    const auth = requireToken();
+    if (!auth.ok) {
+      return { ok: false, success: false, message: 'Unauthorized' };
+    }
+
+    if (!eventId) {
+      return { ok: false, success: false, message: 'eventId is required' };
+    }
+
+    const res = await fetch(`${API_URL}/events/${eventId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(auth.token),
+    });
+
+    const result = await readJsonResponse(res);
+    return { status: res.status, ok: res.ok, ...result };
+  } catch (error) {
+    console.error('Error in deleteEvent network request: ', error);
+    return { ok: false, success: false, message: error.message || 'Networking error occurred' };
   }
 }

@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import { preflightResponse, withCors } from '@/lib/cors';
+import { requireAuth } from '@/lib/auth-middleware';
 
 export async function OPTIONS() {
   return preflightResponse();
@@ -10,24 +10,14 @@ export async function OPTIONS() {
 
 export async function GET(req) {
   try {
-    const auth = req.headers.get('authorization');
-    const token = auth?.split(' ')[1];
-    console.log('Auth token (me route):', token);
-
-    if (!token) {
-      return withCors(NextResponse.json({ error: 'Not authenticated' }, { status: 401 }));
-    }
-
-    // Verify token using our jose helper
-    const payload = await verifyToken(token);
-
-    if (!payload) {
-      return withCors(NextResponse.json({ error: 'Session expired or invalid' }, { status: 401 }));
+    const authResult = await requireAuth(req);
+    if (!authResult.ok) {
+      return withCors(NextResponse.json({ error: authResult.error }, { status: authResult.status }));
     }
 
     // Option: fetch fresh user data from DB to ensure user still exists and role hasn't changed
     await dbConnect();
-    const user = await User.findById(payload.id).select('-password'); // Exclude password field
+    const user = await User.findById(req.userId).select('-password'); // Exclude password field
 
     if (!user) {
       return withCors(NextResponse.json({ error: 'User not found' }, { status: 404 }));
@@ -35,12 +25,7 @@ export async function GET(req) {
 
     return withCors(NextResponse.json({
       message: 'Authenticated successfully',
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role
-      }
+      user
     }, { status: 200 }));
 
   } catch (error) {

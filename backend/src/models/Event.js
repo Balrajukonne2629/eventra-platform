@@ -1,6 +1,12 @@
 import mongoose from 'mongoose';
 
 const EventSchema = new mongoose.Schema({
+  organizerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: false,
+    index: true,
+  },
   title: {
     type: String,
     required: [true, 'Please provide a title for the event'],

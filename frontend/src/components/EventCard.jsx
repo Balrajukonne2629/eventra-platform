@@ -1,54 +1,68 @@
-export default function EventCard({ event, onActionClick, actionLabel = "Register", isOrganizer = false }) {
+import Button from "./Button";
+
+export default function EventCard({ event, onActionClick, actionLabel = "Register", isOrganizer = false, onDeleteClick }) {
   const deadlineDate = new Date(event.deadline).toLocaleDateString();
   const deadlineTime = new Date(event.deadline).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <div className="bg-slate-800 rounded-2xl shadow-lg border border-slate-700 p-6 hover:shadow-2xl hover:scale-[1.02] transform transition-all duration-300 flex flex-col h-full ring-1 ring-white/5 disabled:opacity-50">
-      <div className="flex-grow flex flex-col gap-3">
+    <div className="surface-card rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:border-slate-500/70 flex h-full flex-col">
+      <div className="flex flex-grow flex-col gap-3.5">
         <div className="flex justify-between items-start">
-          <h3 className="text-2xl font-bold text-white line-clamp-2 title-shadow leading-tight tracking-tight">{event.title}</h3>
+          <h3 className="line-clamp-2 text-2xl font-bold leading-tight text-slate-50">{event.title}</h3>
         </div>
         
-        <p className="text-base font-semibold text-blue-400 tracking-wide">{event.club}</p>
+        <p className="text-sm font-semibold uppercase tracking-[0.12em] text-blue-300">{event.club}</p>
         
         <div className="flex gap-2 items-center flex-wrap my-1">
-          <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider whitespace-nowrap border ${event.category === 'Technical' ? 'bg-blue-900/40 text-blue-300 border-blue-800' : 'bg-purple-900/40 text-purple-300 border-purple-800'}`}>
+          <span className={`px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap border ${event.category === 'Technical' ? 'bg-blue-500/20 text-blue-200 border-blue-400/30' : 'bg-fuchsia-500/20 text-fuchsia-200 border-fuchsia-400/30'}`}>
             {event.category}
           </span>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-900/30 text-emerald-400 text-xs font-bold tracking-wider uppercase border border-emerald-800 shadow-sm">
-            📧 Faculty Notified
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-200 text-[11px] font-semibold tracking-wider uppercase border border-emerald-400/30">
+            Faculty Notified
           </span>
         </div>
         
-        <p className="text-sm text-slate-400 mt-2">
-          Created by: <span className="font-bold text-slate-200">{event.organizer?.name || "Organizer"}</span>
+        <p className="mt-1 text-sm text-slate-400">
+          Created by <span className="font-semibold text-slate-200">{event.organizer?.name || "Organizer"}</span>
         </p>
         
-        <p className="text-slate-300 font-medium text-base line-clamp-3 my-2 flex-grow leading-relaxed">
+        <p className="my-1 line-clamp-3 flex-grow text-sm leading-relaxed text-slate-300">
           {event.description}
         </p>
         
-        <div className="space-y-4 text-sm border-t border-slate-700 pt-5 mt-auto">
+        <div className="mt-auto space-y-3 border-t border-slate-700/80 pt-4 text-sm">
           <div className="flex items-center justify-between">
-            <span className="font-bold text-slate-400 uppercase tracking-widest text-xs">Deadline</span>
-            <span className="bg-orange-900/30 text-orange-400 px-3 py-1.5 rounded-lg border border-orange-800/60 font-bold text-xs shadow-sm">
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Deadline</span>
+            <span className="rounded-lg border border-amber-400/30 bg-amber-500/20 px-3 py-1 text-[11px] font-semibold text-amber-100">
               {deadlineDate} - {deadlineTime}
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="font-bold text-slate-400 uppercase tracking-widest text-xs">Team Size</span>
-            <span className="font-bold text-slate-200">{event.teamSize === 1 ? 'Individual' : `${event.teamSize} Members`}</span>
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Team Size</span>
+            <span className="text-sm font-semibold text-slate-200">{event.teamSize === 1 ? 'Individual' : `${event.teamSize} Members`}</span>
           </div>
         </div>
       </div>
       
-      <div className="mt-8">
-        <button 
+      <div className="mt-6 space-y-2">
+        <Button
           onClick={() => onActionClick(event)}
-          className={`w-full py-3.5 rounded-xl font-bold text-base transition-all shadow-lg transform hover:-translate-y-0.5 border ${isOrganizer ? 'bg-slate-700 text-emerald-400 border-slate-600 hover:bg-slate-600 hover:text-emerald-300' : 'bg-blue-600 text-white border-blue-500 hover:bg-blue-500 hover:shadow-blue-500/20'}`}
+          fullWidth
+          variant={isOrganizer ? "secondary" : "primary"}
+          className={isOrganizer ? "text-emerald-200" : ""}
         >
           {actionLabel}
-        </button>
+        </Button>
+
+        {isOrganizer && onDeleteClick && (
+          <Button
+            onClick={() => onDeleteClick(event)}
+            fullWidth
+            variant="danger"
+          >
+            Delete Event
+          </Button>
+        )}
       </div>
     </div>
   );

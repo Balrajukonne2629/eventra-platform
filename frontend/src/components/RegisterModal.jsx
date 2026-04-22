@@ -3,66 +3,90 @@ import { useState, useEffect } from "react";
 import InputField from "./InputField";
 import Button from "./Button";
 import Alert from "./Alert";
-import { getUser } from "@/lib/auth-util";
-
-const existingTeams = ["Alpha", "Beta", "Gamma"];
+import { useAuth } from "@/context/AuthContext";
+import { registerForEvent } from "@/lib/api";
 
 export default function RegisterModal({ event, onClose }) {
+  const { user: activeUser } = useAuth();
   const [teamName, setTeamName] = useState("");
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const [user, setUser] = useState({ name: "", rollNumber: "" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    const activeUser = getUser();
     if (activeUser) setUser(activeUser);
-  }, []);
+  }, [activeUser]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    if (event?.teamSize > 1) {
-      // Check for duplicate team name
-      if (existingTeams.includes(teamName.trim())) {
-        setError("❌ Team name already exists");
-        return;
-      }
-      
-      existingTeams.push(teamName.trim());
+    const userId = activeUser?._id || activeUser?.id;
+    if (!userId) {
+      setError("Please login first");
+      return;
     }
 
-    setSuccess(true);
-    setTimeout(() => {
-      onClose();
-    }, 2000); // Close after 2 seconds
+    const normalizedTeamName = event?.teamSize > 1
+      ? teamName.trim()
+      : `${activeUser?.name || "Individual"}-${String(userId).slice(-6)}`;
+
+    if (!normalizedTeamName) {
+      setError("Team name is required");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const payload = {
+      eventId: event?._id,
+      userId,
+      teamName: normalizedTeamName,
+      members: [userId],
+    };
+
+    const response = await registerForEvent(payload);
+    if (response.success) {
+      setSuccess(true);
+      setTimeout(() => {
+        onClose();
+      }, 1500);
+    } else {
+      setError(response.message || "Failed to register for event");
+    }
+
+    setIsSubmitting(false);
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in">
-      <div className="bg-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.5)] ring-1 ring-white/10">
-        <div className="px-6 py-5 border-b border-slate-700 flex justify-between items-center bg-slate-900">
-          <h3 className="text-2xl font-bold text-white tracking-tight">Register for Event</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-md animate-in fade-in">
+      <div className="surface-card w-full max-w-lg overflow-hidden rounded-2xl">
+        <div className="flex items-center justify-between border-b border-slate-700/80 bg-slate-950/70 px-6 py-5">
+          <div>
+            <h3 className="text-2xl font-bold text-slate-50">Register for Event</h3>
+            <p className="mt-1 text-sm text-slate-400">Confirm your seat before the deadline</p>
+          </div>
+          <button onClick={onClose} className="rounded-full p-2 text-slate-400 transition-colors hover:bg-white/5 hover:text-white" aria-label="Close registration modal">
             <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
         
-        <div className="p-8">
-          <div className="mb-8 p-5 bg-blue-900/40 text-blue-200 rounded-xl text-base font-medium border border-blue-800/60 shadow-inner">
-            You are registering for <span className="font-extrabold text-white">{event?.title}</span>.
+        <div className="p-6 sm:p-8">
+          <div className="mb-6 rounded-2xl border border-blue-400/25 bg-blue-500/10 p-5 text-sm text-blue-100 shadow-inner">
+            You are registering for <span className="font-semibold text-white">{event?.title}</span>.
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-900/30 text-red-300 border border-red-800/50 rounded-lg font-bold text-base text-center">
+            <div className="mb-6 rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm font-medium text-rose-100">
               {error}
             </div>
           )}
 
           {success ? (
-            <Alert type="success" message="✅ Registered Successfully" />
+            <Alert type="success" message="Registration submitted successfully." />
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <InputField 
@@ -70,14 +94,14 @@ export default function RegisterModal({ event, onClose }) {
                 value={user.name} 
                 onChange={() => {}} // simulated frozen
                 placeholder="Your Name"
-                disabled 
+                disabled
               />
               <InputField 
                 label="Roll Number" 
                 value={user.rollNumber} 
                 onChange={() => {}} 
                 placeholder="Your Roll Number"
-                disabled 
+                disabled
               />
               
               {event?.teamSize > 1 && (
@@ -89,13 +113,17 @@ export default function RegisterModal({ event, onClose }) {
                     placeholder="e.g. Alpha Squad"
                     required 
                   />
-                  <p className="mt-2 text-sm text-slate-400 font-medium italic">*Use same team name to join an existing team</p>
+                  <p className="mt-2 text-xs font-medium italic text-slate-400">Use the same team name to join an existing team.</p>
                 </div>
               )}
               
-              <div className="pt-6 mt-8 border-t border-slate-700 flex space-x-4">
-                <Button type="submit" fullWidth>Confirm</Button>
-                <button type="button" onClick={onClose} className="px-8 py-4 border border-slate-600 rounded-xl text-slate-300 font-bold hover:bg-slate-700 hover:text-white transition-all flex-grow shadow-sm">Cancel</button>
+              <div className="mt-8 flex gap-3 border-t border-slate-700/80 pt-5">
+                <Button type="submit" fullWidth loading={isSubmitting} disabled={isSubmitting}>
+                  {isSubmitting ? "Submitting..." : "Confirm"}
+                </Button>
+                <Button type="button" variant="ghost" onClick={onClose} fullWidth>
+                  Cancel
+                </Button>
               </div>
             </form>
           )}

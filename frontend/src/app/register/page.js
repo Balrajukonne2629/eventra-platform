@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import InputField from "@/components/InputField";
 import Button from "@/components/Button";
+import Alert from "@/components/Alert";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://eventra-platform.onrender.com/api';
 
@@ -20,6 +21,7 @@ export default function RegisterPage() {
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [success, setSuccess] = useState("");
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -34,6 +36,7 @@ export default function RegisterPage() {
     
     setIsLoading(true);
     setError("");
+    setSuccess("");
 
     try {
       const res = await fetch(`${API_URL}/auth/register`, {
@@ -59,18 +62,11 @@ export default function RegisterPage() {
         throw new Error("Invalid JSON response (HTML returned)");
       }
 
-      // Store in localStorage directly after successful register 
-      // We leverage the standard object to hold names/departments seamlessly until official login.
-      localStorage.setItem("eventra_user", JSON.stringify({
-        name: formData.name || "User",
-        email: formData.email,
-        role: formData.role,
-        rollNumber: formData.rollNumber || "N/A",
-        department: formData.department || "N/A"
-      }));
-
       // Redirect to login page
-      router.push("/login");
+      setSuccess("Account created successfully. Redirecting to login...");
+      setTimeout(() => {
+        router.push("/login");
+      }, 700);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -79,19 +75,16 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex flex-col flex-grow items-center justify-center min-h-[70vh] py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-slate-800/80 p-8 rounded-2xl shadow-2xl border border-slate-700 animate-in fade-in zoom-in-95">
+    <div className="flex min-h-[72vh] flex-col items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
+      <div className="surface-card w-full max-w-md animate-in fade-in zoom-in-95 space-y-8 rounded-2xl p-8">
         <div className="text-center flex flex-col items-center">
-          <Image src="/logo.png" alt="Eventra Logo" width={80} height={80} className="mb-4 rounded-full shadow-lg shadow-black/40" />
-          <h2 className="text-4xl font-extrabold text-white tracking-tight">Create an Account</h2>
+          <Image src="/logo.png" alt="Eventra Logo" width={80} height={80} className="mb-4 rounded-full shadow-lg shadow-black/40 ring-1 ring-white/10" />
+          <h2 className="text-4xl font-extrabold tracking-tight text-slate-50">Create an Account</h2>
           <p className="mt-3 text-base font-medium text-slate-400">Join Eventra to manage and discover events.</p>
         </div>
         
-        {error && (
-          <div className="p-5 my-6 bg-red-900/30 text-red-300 border border-red-800/60 rounded-xl text-base text-center font-bold tracking-wide shadow-sm">
-            {error}
-          </div>
-        )}
+        {success && <Alert type="success" message={success} />}
+        {error && <Alert type="error" message={error} />}
 
         <form className="mt-8 space-y-6" onSubmit={handleRegister}>
           <InputField 
@@ -141,19 +134,19 @@ export default function RegisterPage() {
               name="role"
               value={formData.role}
               onChange={handleChange}
-              className="w-full px-4 py-3.5 border border-slate-700 rounded-xl shadow-inner focus:ring-2 focus:ring-blue-500 bg-slate-800 text-white outline-none font-medium text-base hover:border-slate-600 transition-all cursor-pointer"
+              className="w-full cursor-pointer rounded-xl border border-slate-600/80 bg-slate-900/85 px-4 py-3 text-sm font-medium text-slate-100 outline-none transition-all hover:border-slate-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/35"
             >
               <option value="student">Student</option>
               <option value="organizer">Organizer</option>
             </select>
           </div>
 
-          <Button type="submit" disabled={isLoading} fullWidth>
+            <Button type="submit" disabled={isLoading} loading={isLoading} fullWidth>
             {isLoading ? "Creating Account..." : "Register"}
           </Button>
 
-          <div className="text-center text-base font-medium text-slate-400 mt-6">
-            Already have an account? <Link href="/login" className="text-blue-400 font-bold hover:text-blue-300 transition-colors ml-1">Login</Link>
+            <div className="mt-6 text-center text-base font-medium text-slate-400">
+              Already have an account? <Link href="/login" className="ml-1 font-semibold text-blue-300 transition-colors hover:text-blue-200">Login</Link>
           </div>
         </form>
       </div>

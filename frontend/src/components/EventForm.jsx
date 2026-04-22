@@ -3,7 +3,6 @@
 import { useState } from "react";
 import InputField from "./InputField";
 import Button from "./Button";
-import Loader from "./Loader";
 import Alert from "./Alert";
 import { createEvent } from "@/lib/api";
 
@@ -59,8 +58,8 @@ export default function EventForm() {
   };
 
   return (
-    <div className="bg-slate-800 p-8 sm:p-10 rounded-2xl shadow-xl border border-slate-700 max-w-3xl mx-auto w-full ring-1 ring-white/5">
-      <h2 className="text-3xl font-extrabold text-white mb-8 border-b border-slate-700 pb-4 tracking-tight">Provide Event Details</h2>
+    <div className="surface-card mx-auto w-full max-w-3xl rounded-2xl p-6 shadow-xl sm:p-8 lg:p-10">
+      <h2 className="page-title mb-8 border-b border-slate-700/80 pb-4 text-3xl font-extrabold tracking-tight">Provide Event Details</h2>
 
       <Alert type={status.type} message={status.message} />
 
@@ -94,26 +93,26 @@ export default function EventForm() {
             required
           />
 
-          <div className="flex flex-col space-y-2">
-            <label className="text-sm font-bold text-slate-300 tracking-wide">Category <span className="text-red-400 ml-1">*</span></label>
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-semibold tracking-wide text-slate-200">Category <span className="ml-1 text-red-400">*</span></label>
             <select
               name="category"
               value={formData.category}
               onChange={handleChange}
-              className="w-full px-4 py-3.5 border border-slate-700 rounded-xl shadow-inner focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-slate-800 text-white outline-none font-medium text-base hover:border-slate-600 transition-all cursor-pointer"
+              className="w-full cursor-pointer rounded-xl border border-slate-600/80 bg-slate-900/85 px-4 py-3 text-sm font-medium text-slate-100 outline-none transition-all hover:border-slate-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/35"
             >
               <option value="Technical">Technical</option>
               <option value="Non-Technical">Non-Technical</option>
             </select>
           </div>
 
-          <div className="flex flex-col space-y-2">
-            <label className="text-sm font-bold text-slate-300 tracking-wide">Team Size <span className="text-red-400 ml-1">*</span></label>
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-semibold tracking-wide text-slate-200">Team Size <span className="ml-1 text-red-400">*</span></label>
             <select
               name="teamSize"
               value={formData.teamSize}
               onChange={handleChange}
-              className="w-full px-4 py-3.5 border border-slate-700 rounded-xl shadow-inner focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-slate-800 text-white outline-none font-medium text-base hover:border-slate-600 transition-all cursor-pointer"
+              className="w-full cursor-pointer rounded-xl border border-slate-600/80 bg-slate-900/85 px-4 py-3 text-sm font-medium text-slate-100 outline-none transition-all hover:border-slate-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/35"
             >
               <option value="1">1 (Individual)</option>
               <option value="2">2 Members</option>
@@ -151,9 +150,9 @@ export default function EventForm() {
           />
         </div>
 
-        <div className="pt-6 border-t border-slate-700 mt-8">
-          <Button type="submit" disabled={isLoading} fullWidth>
-            {isLoading ? <Loader text="Creating Event..." /> : "Propose Event"}
+        <div className="mt-8 border-t border-slate-700/80 pt-6">
+          <Button type="submit" disabled={isLoading} loading={isLoading} fullWidth>
+            {isLoading ? "Creating Event..." : "Propose Event"}
           </Button>
         </div>
       </form>

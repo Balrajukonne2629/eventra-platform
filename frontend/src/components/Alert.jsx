@@ -2,16 +2,16 @@ export default function Alert({ type = "success", message }) {
   if (!message) return null;
 
   const isSuccess = type === "success";
-  const bgColor = isSuccess ? "bg-emerald-900/30" : "bg-red-900/30";
-  const borderCol = isSuccess ? "border-emerald-800/60" : "border-red-800/60";
-  const textCol = isSuccess ? "text-emerald-400" : "text-red-300";
-  const shadowInfo = isSuccess ? "shadow-emerald-900/20" : "shadow-red-900/20";
-  const icon = isSuccess ? "✅" : "❌";
+  const bgColor = isSuccess ? "bg-emerald-500/12" : "bg-rose-500/12";
+  const borderCol = isSuccess ? "border-emerald-400/35" : "border-rose-400/35";
+  const textCol = isSuccess ? "text-emerald-200" : "text-rose-200";
+  const iconBg = isSuccess ? "bg-emerald-400/20 text-emerald-200" : "bg-rose-400/20 text-rose-200";
+  const icon = isSuccess ? "Success" : "Error";
 
   return (
-    <div className={`p-5 my-6 rounded-xl border flex items-center gap-4 shadow-sm ${shadowInfo} ${bgColor} ${borderCol} ${textCol} animate-in fade-in slide-in-from-top-2`}>
-      <span className="text-2xl">{icon}</span>
-      <p className="font-bold tracking-wide text-base">{message}</p>
+    <div className={`my-6 flex items-start gap-3 rounded-xl border p-4 ${bgColor} ${borderCol} ${textCol} animate-in fade-in slide-in-from-top-2`}>
+      <span className={`rounded-lg px-2 py-1 text-xs font-semibold uppercase tracking-wider ${iconBg}`}>{icon}</span>
+      <p className="text-sm font-medium leading-relaxed">{message}</p>
     </div>
   );
 }

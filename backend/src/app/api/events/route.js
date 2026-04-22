@@ -1,19 +1,48 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import connectDB from "@/lib/db";
 import Event from "@/models/Event";
 import User from "@/models/User";
-import { verifyToken } from "@/lib/auth";
 import nodemailer from "nodemailer";
 import { preflightResponse, withCors } from "@/lib/cors";
+import { requireAuth } from "@/lib/auth-middleware";
+
+const EMAIL_REGEX = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+
+function isNonEmptyString(value) {
+  return typeof value === 'string' && value.trim().length > 0;
+}
 
 export async function OPTIONS() {
   return preflightResponse();
 }
 
-export async function GET() {
+export async function GET(req) {
   try {
     await connectDB();
-    const events = await Event.find({}).sort({ createdAt: -1 }); // Get all events, newest first
+
+    const authResult = await requireAuth(req);
+    if (!authResult.ok) {
+      return withCors(NextResponse.json({ success: false, error: authResult.error }, { status: authResult.status }));
+    }
+
+    const { searchParams } = new URL(req.url);
+    const organizerId = searchParams.get('organizerId');
+
+    let query = {};
+    if (organizerId) {
+      if (!mongoose.Types.ObjectId.isValid(organizerId)) {
+        return withCors(NextResponse.json({ success: false, error: 'Invalid organizerId' }, { status: 400 }));
+      }
+
+      if (authResult.userId !== organizerId) {
+        return withCors(NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 }));
+      }
+
+      query = { organizerId };
+    }
+
+    const events = await Event.find(query).sort({ createdAt: -1 }); // Get events, newest first
     return withCors(NextResponse.json({ success: true, count: events.length, data: events }, { status: 200 }));
   } catch (error) {
     return withCors(NextResponse.json({ success: false, error: error.message }, { status: 500 }));
@@ -26,17 +55,11 @@ export async function POST(req) {
     await connectDB();
 
     // 1.5 Extract logged-in user details
-    const auth = req.headers.get('authorization');
-    const token = auth?.split(' ')[1];
-    console.log('Auth token (events route):', token);
-    if (!token) {
-      return withCors(NextResponse.json({ message: "Unauthorized. Please log in first." }, { status: 401 }));
+    const authResult = await requireAuth(req);
+    if (!authResult.ok) {
+      return withCors(NextResponse.json({ message: authResult.error }, { status: authResult.status }));
     }
-    const decoded = await verifyToken(token);
-    if (!decoded) {
-      return withCors(NextResponse.json({ message: "Session expired or invalid. Please log in again." }, { status: 401 }));
-    }
-    const organizer = await User.findById(decoded.id);
+    const organizer = await User.findById(authResult.userId);
     if (!organizer) {
       return withCors(NextResponse.json({ message: "User not found" }, { status: 404 }));
     }
@@ -45,17 +68,21 @@ export async function POST(req) {
     const body = await req.json();
     const { title, description, club, category, teamSize, maxTeams, deadline, facultyEmail } = body;
 
-    const orgName = organizer.name || "Unknown";
-    const orgEmail = organizer.email || "Unknown";
-    const orgRoll = body.rollNumber || organizer.rollNumber || "N/A";
-    const orgDept = body.department || organizer.department || "N/A";
+    const orgName = organizer.name?.trim() || "Not Provided";
+    const orgEmail = organizer.email?.trim() || "Not Provided";
+    const orgRoll = organizer.rollNumber?.trim() || "Not Provided";
+    const orgDept = organizer.department?.trim() || "Not Provided";
 
     // 3. Validate required fields
-    if (!title || !description || !club || !category || !teamSize || !maxTeams || !deadline || !facultyEmail) {
+    if (!isNonEmptyString(title) || !isNonEmptyString(description) || !isNonEmptyString(club) || !isNonEmptyString(category) || teamSize === undefined || maxTeams === undefined || !deadline || !isNonEmptyString(facultyEmail)) {
       return withCors(NextResponse.json(
         { message: "All fields are required, including faculty email" },
         { status: 400 }
       ));
+    }
+
+    if (!EMAIL_REGEX.test(facultyEmail)) {
+      return withCors(NextResponse.json({ message: 'Please provide a valid faculty email' }, { status: 400 }));
     }
 
     // 4. Validate specific constraints
@@ -66,6 +93,10 @@ export async function POST(req) {
       ));
     }
 
+    if (!Number.isFinite(Number(teamSize)) || !Number.isFinite(Number(maxTeams))) {
+      return withCors(NextResponse.json({ message: 'teamSize and maxTeams must be valid numbers' }, { status: 400 }));
+    }
+
     if (![1, 2, 4].includes(Number(teamSize))) {
       return withCors(NextResponse.json(
         { message: "Team size must be 1, 2, or 4" },
@@ -73,8 +104,17 @@ export async function POST(req) {
       ));
     }
 
+    if (Number(maxTeams) <= 0) {
+      return withCors(NextResponse.json({ message: 'maxTeams must be greater than 0' }, { status: 400 }));
+    }
+
+    if (Number.isNaN(new Date(deadline).getTime())) {
+      return withCors(NextResponse.json({ message: 'deadline must be a valid date' }, { status: 400 }));
+    }
+
     // 5. Create and save the event in MongoDB
     const newEvent = await Event.create({
+      organizerId: organizer._id,
       title,
       description,
       club,
