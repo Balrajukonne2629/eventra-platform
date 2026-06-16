@@ -121,5 +121,6 @@ Notification system
 Analytics dashboard
 Advanced filtering
 
+
 ## ⭐ Final Note
 This project demonstrates a complete full-stack architecture with authentication, role-based access, and real-world features suitable for academic and portfolio purposes.
